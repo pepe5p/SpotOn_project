@@ -1,6 +1,7 @@
 from googletrans import Translator
 import string
 
+
 translator = Translator(service_urls=['translate.googleapis.com'])
 
 
