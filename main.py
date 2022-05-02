@@ -2,8 +2,12 @@ from food_search import find_food
 import ast
 
 
-def main():
-    """entrypoint of program, gets input from user by terminal"""
+def main() -> None:
+    """
+    Entrypoint of program.
+
+    Gets input from user by terminal.
+    """
 
     print("\n"
           "Enter ingredients that you have.\n"
