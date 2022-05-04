@@ -1,4 +1,4 @@
-from food_search import find_food
+from src.food_search import find_food
 import ast
 
 

@@ -1,13 +1,9 @@
-from translation import translate_ingr
-from database import Database
+from .translation import translate_ingr
+from .database import Database
 import requests
 import json
 
 
-db = Database()
-
-
-# TODO: tests
 def find_food(included_ingr: list, excluded_ingr: list | None = None) -> None:
     """
     Function that finds list of meals and suggest what to eat.
@@ -24,29 +20,27 @@ def find_food(included_ingr: list, excluded_ingr: list | None = None) -> None:
     included_ingr.sort()
     excluded_ingr.sort()
 
+    db = Database()
     data = db.fetch_output(incl_ingr=included_ingr, excl_ingr=excluded_ingr)
     if not data:
-        data = get_data_from_api(included_ingr, excluded_ingr)
+        query = generate_query(included_ingr, excluded_ingr)
+        data = get_data_from_api(query)
+        db.insert(None, str(included_ingr), str(excluded_ingr), data)
+
     data = json.loads(data)
 
     if len(data) == 0:
-        print("\nSorry, we don't have meals with that ingredients.")
+        print("\nSorry, we don't have meals with these ingredients.")
         return
 
-    create_html_file(data)
+    file_name = create_html_file(included_ingr, data)
+
+    print("\nOutput stored in file:", file_name)
 
 
-def get_data_from_api(included_ingr: list, excluded_ingr: list) -> str:
+def generate_query(included_ingr: list, excluded_ingr: list) -> str:
     """
-    Function that gets JSON response from API of https://api.spoonacular.com.
-
-    Transforms data to smaller and more comfortable format.
-
-    Store data to DB and returns that data.
-
-    :param included_ingr: list of ingredients to include
-    :param excluded_ingr: list of ingredients to exclude
-    :return: data from API
+    :return: query prepared to be sent
     """
 
     with open("spoonacular_api_key.txt", "r") as file:
@@ -60,9 +54,21 @@ def get_data_from_api(included_ingr: list, excluded_ingr: list) -> str:
              "&addRecipeNutrition=true"
              "&number=5"
              "&sort=min-missing-ingredients")
-    # print("\n query: ", query, '\n\n')
+
+    return query
+
+
+def get_data_from_api(query: str) -> str:
+    """
+    Function that gets JSON response from API of https://api.spoonacular.com.
+
+    Transforms data to smaller and more comfortable format.
+
+    :return: data from API
+    """
+
     data_json = requests.get(query).text
-    data = json.loads(data_json)
+    data = json.loads(data_json, strict=False)
 
     new_data = []
     for recipe in data["results"]:
@@ -78,19 +84,19 @@ def get_data_from_api(included_ingr: list, excluded_ingr: list) -> str:
         }
         new_data.append(recipe_dict)
 
-    # TODO: ask for relation between (min carbs, max proteins)
     new_data.sort(key=lambda result: 3*result["carbs"][0] - result["proteins"][0])
-
     new_data_json = json.dumps(new_data)
-    db.insert(None, str(included_ingr), str(excluded_ingr), new_data_json)
 
     return new_data_json
 
 
-def create_html_file(data: list) -> None:
+def create_html_file(included_ingr: list, data: list) -> str:
     """
+    :param included_ingr: necessary to name file correctly
     :param data: list of recipes to display
     """
+    if not included_ingr:
+        included_ingr = ['none']
 
     best = data[0]
     text = f'We suggest you to choose {best["name"]}, ' \
@@ -99,17 +105,16 @@ def create_html_file(data: list) -> None:
     for recipe in data:
         text += generate_recipe_text(recipe)
 
-    extended_ingr = best['used_ingr'] + best['missed_ingr']
     normalized_ingr = [ingr.lower().replace(" ", "-") + str(int(i) + 1)
-                       for i, ingr in enumerate(extended_ingr)]
+                       for i, ingr in enumerate(included_ingr)]
 
     file_name = "_".join(normalized_ingr)
-    file_name = "outputs/" + file_name + ".html"
-
-    print("\noutput stored in file:", file_name)
+    file_name = "html_outputs/" + file_name + ".html"
 
     with open(file_name, "w") as file:
         file.write(text)
+
+    return file_name
 
 
 def generate_recipe_text(recipe: dict) -> str:
