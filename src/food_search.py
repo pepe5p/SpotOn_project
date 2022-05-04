@@ -90,19 +90,19 @@ def get_data_from_api(query: str) -> str:
     return new_data_json
 
 
-def create_html_file(included_ingr: list, data: list) -> str:
+def create_html_file(included_ingr: list, recipes: list) -> str:
     """
     :param included_ingr: necessary to name file correctly
-    :param data: list of recipes to display
+    :param recipes: list of recipes to display
     """
     if not included_ingr:
         included_ingr = ['none']
 
-    best = data[0]
-    text = f'We suggest you to choose {best["name"]}, ' \
-           f'because it has only {best["carbs"][0]}{best["carbs"][1]} carbs, ' \
-           f'and {best["proteins"][0]}{best["proteins"][1]} proteins.<br><br><br><br>'
-    for recipe in data:
+    best_recipe = recipes[0]
+    text = f'We suggest you to choose {best_recipe["name"]}, ' \
+           f'because it has only {best_recipe["carbs"][0]}{best_recipe["carbs"][1]} carbs, ' \
+           f'and {best_recipe["proteins"][0]}{best_recipe["proteins"][1]} proteins.<br><br><br><br>'
+    for recipe in recipes:
         text += generate_recipe_text(recipe)
 
     normalized_ingr = [ingr.lower().replace(" ", "-") + str(int(i) + 1)
